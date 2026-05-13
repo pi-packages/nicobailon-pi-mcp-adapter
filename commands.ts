@@ -15,8 +15,8 @@ import {
 import { lazyConnect, updateMetadataCache, updateStatusBar, getFailureAgeSeconds } from "./init.ts";
 import { loadMetadataCache } from "./metadata-cache.ts";
 import { buildToolMetadata } from "./tool-metadata.ts";
-import { supportsOAuth, authenticate } from "./mcp-auth-flow.ts";
-import { clearAllCredentials, getAuthForUrl } from "./mcp-auth.ts";
+import { supportsOAuth, authenticate, removeAuth } from "./mcp-auth-flow.ts";
+import { getAuthForUrl } from "./mcp-auth.ts";
 import { loadOnboardingState, markSetupCompleted as persistSetupCompleted, markSharedConfigHintShown } from "./onboarding-state.ts";
 import { openPath } from "./utils.ts";
 
@@ -204,7 +204,7 @@ export async function logoutServer(
     return { ok: false, message };
   }
 
-  clearAllCredentials(serverName);
+  await removeAuth(serverName);
   await state.manager.close(serverName);
   updateStatusBar(state);
 

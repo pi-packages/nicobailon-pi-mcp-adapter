@@ -102,14 +102,18 @@ describe("commands onboarding", () => {
     expect(loadOnboardingState().sharedConfigHintShown).toBe(true);
   });
 
-  it("clears OAuth credentials and closes the server on logout", async () => {
+  it("clears OAuth credentials, cancels pending auth, and closes the server on logout", async () => {
     process.env.MCP_OAUTH_DIR = mkdtempSync(join(tmpdir(), "pi-mcp-commands-logout-"));
     const ui = createUi();
     const close = vi.fn();
-    const { getAuthEntry, updateTokens } = await import("../mcp-auth.ts");
+    const { getAuthEntry, updateOAuthState, updateTokens } = await import("../mcp-auth.ts");
+    const { waitForCallback } = await import("../mcp-callback-server.ts");
     const { logoutServer } = await import("../commands.ts");
 
     updateTokens("oauth-server", { accessToken: "token", refreshToken: "refresh" }, "https://example.com/mcp");
+    updateOAuthState("oauth-server", "pending-state", "https://example.com/mcp");
+    const pendingCallback = waitForCallback("pending-state");
+    const pendingCallbackRejection = expect(pendingCallback).rejects.toThrow("Authorization cancelled");
 
     const result = await logoutServer("oauth-server", {
       config: { mcpServers: { "oauth-server": { url: "https://example.com/mcp", auth: "oauth" } } },
@@ -118,6 +122,7 @@ describe("commands onboarding", () => {
       failureTracker: new Map(),
     } as any, { hasUI: true, ui } as any);
 
+    await pendingCallbackRejection;
     expect(result.ok).toBe(true);
     expect(getAuthEntry("oauth-server")).toBeUndefined();
     expect(close).toHaveBeenCalledWith("oauth-server");

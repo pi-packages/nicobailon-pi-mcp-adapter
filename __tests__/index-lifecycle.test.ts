@@ -16,6 +16,7 @@ const mocks = vi.hoisted(() => ({
   showTools: vi.fn(),
   reconnectServers: vi.fn(),
   authenticateServer: vi.fn(),
+  logoutServer: vi.fn(),
   openMcpAuthPanel: vi.fn(),
   openMcpPanel: vi.fn(),
   openMcpSetup: vi.fn(),
@@ -61,6 +62,7 @@ vi.mock("../commands.ts", () => ({
   showTools: mocks.showTools,
   reconnectServers: mocks.reconnectServers,
   authenticateServer: mocks.authenticateServer,
+  logoutServer: mocks.logoutServer,
   openMcpAuthPanel: mocks.openMcpAuthPanel,
   openMcpPanel: mocks.openMcpPanel,
   openMcpSetup: mocks.openMcpSetup,
@@ -291,6 +293,47 @@ describe("mcpAdapter session lifecycle", () => {
     await commandDef.handler("setup", { hasUI: true, ui: { notify: vi.fn() } });
 
     expect(mocks.openMcpSetup).toHaveBeenCalledWith(state, api, expect.any(Object), undefined, "setup");
+  });
+
+  it("routes `/mcp logout <server>` to credential logout", async () => {
+    const state = createState();
+    mocks.initializeMcp.mockResolvedValue(state);
+
+    const { default: mcpAdapter } = await import("../index.ts");
+    const { api, handlers } = createPi();
+    mcpAdapter(api);
+
+    const ui = { notify: vi.fn() };
+    const sessionStart = handlers.get("session_start");
+    await sessionStart?.({}, { hasUI: true, ui });
+    await Promise.resolve();
+    await Promise.resolve();
+
+    const commandDef = api.registerCommand.mock.calls.find((call: any[]) => call[0] === "mcp")?.[1];
+    await commandDef.handler("logout oauth-server", { hasUI: true, ui });
+
+    expect(mocks.logoutServer).toHaveBeenCalledWith("oauth-server", state, expect.any(Object));
+  });
+
+  it("shows usage for `/mcp logout` without a server", async () => {
+    const state = createState();
+    mocks.initializeMcp.mockResolvedValue(state);
+
+    const { default: mcpAdapter } = await import("../index.ts");
+    const { api, handlers } = createPi();
+    mcpAdapter(api);
+
+    const ui = { notify: vi.fn() };
+    const sessionStart = handlers.get("session_start");
+    await sessionStart?.({}, { hasUI: true, ui });
+    await Promise.resolve();
+    await Promise.resolve();
+
+    const commandDef = api.registerCommand.mock.calls.find((call: any[]) => call[0] === "mcp")?.[1];
+    await commandDef.handler("logout", { hasUI: true, ui });
+
+    expect(mocks.logoutServer).not.toHaveBeenCalled();
+    expect(ui.notify).toHaveBeenCalledWith("Usage: /mcp logout <server>", "error");
   });
 
   it("triggers core reload after setup changes config", async () => {

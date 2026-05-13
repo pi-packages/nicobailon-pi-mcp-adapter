@@ -7,6 +7,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [2.6.1] - 2026-05-13
+
+### Added
+- Added `/mcp logout <server>` to clear stored OAuth credentials and disconnect the server. Thanks @mattzcarey for PR #96.
+
+### Fixed
+- Cancel pending OAuth callbacks when logging out of an MCP server.
+
 ## [2.6.0] - 2026-05-10
 
 ### Added
